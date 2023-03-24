@@ -51,8 +51,8 @@ class ParticleFilter:
                 queue_size=1)
 
         # Tunable Parameters
-        self.noise_scale = 0.1
-
+        self.noise_scale = 0.5 # Used for particle initialization random distribution
+ 
     def initialize_particles(self, data):
         # Get click pose
         pose = data.pose.pose
@@ -110,6 +110,7 @@ class ParticleFilter:
         particle_theta = self.particles[:, 2]  # angle values
 
         # Estimate Robot Position through Averaging
+        # TODO: Consider other forms of estimating position
         average_x = np.average(particle_x)
         average_y = np.average(particle_y)
         average_theta = np.arctan2(np.sum(np.sin(particle_theta)), np.sum(np.cos(particle_theta)))
