@@ -50,22 +50,22 @@ class ParticleFilter:
                 self.initialize_particles,                        
                 queue_size=1)
 
-    def initialize_particles(self, data):
-        pose = data.pose.pose
-        covariance = np.array(data.pose.covariance).reshape((6,6))
+        # Tunable Parameters
+        self.noise_scale = 0.1
 
+    def initialize_particles(self, data):
+        # Get click pose
+        pose = data.pose.pose
         orient = pose.orientation
         quat_tuple = (orient.x, orient.y, orient.z, orient.w)
         roll, pitch, yaw = euler_from_quaternion(quat_tuple)
-        mean = [pose.position.x, pose.position.y, yaw]
-        relevant_covariance_idx = [0, 1, 5] #[x], [y], z, roll, pitch, [yaw=theta]
-        relevant_covariance = covariance[np.ix_(relevant_covariance_idx, relevant_covariance_idx)] #sub covariance matrix with only x, y, theta
-        init_particles = np.random.multivariate_normal(mean, relevant_covariance, self.num_particles)
+        click_pose = [pose.position.x, pose.position.y, yaw]
+
+        init_particles = np.random.normal(click_pose, scale=self.noise_scale, size=(self.num_particles,3))
         self.particles = init_particles
 
     def on_get_odometry(self, odometry_data):
-
-        # Get dX  OUR BUGS 
+        # Get dX
         twist = odometry_data.twist.twist
         twist_dx = twist.linear.x
         twist_dy = twist.linear.y
