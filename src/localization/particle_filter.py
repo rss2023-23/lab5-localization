@@ -27,12 +27,14 @@ class ParticleFilter:
         self.particle_indices = np.arange(0, self.num_particles)
         self.lock = threading.Lock()
         self.estimated_pose = [0,0,0]
+        self.last_time = rospy.get_time()
 
         # Initialize publishers
         self.odom_pub  = rospy.Publisher("/pf/pose/odom", Odometry, queue_size = 1)
         self.particle_visualizer = rospy.Publisher("/particles", PoseArray, queue_size = 10)
         self.tf_buffer = tf2_ros.Buffer()
         self.tf_broadcaster = tf2_ros.TransformBroadcaster()
+
 
 
         # Initialize subscribers
@@ -62,12 +64,18 @@ class ParticleFilter:
         self.particles = init_particles
 
     def on_get_odometry(self, odometry_data):
-        # Get dX
+
+        # Get dX  OUR BUGS 
         twist = odometry_data.twist.twist
         twist_dx = twist.linear.x
         twist_dy = twist.linear.y
         twist_dtheta = twist.angular.z
         dX = np.array([twist_dx, twist_dy, twist_dtheta])
+
+        # Scale by dT
+        time = rospy.get_time()
+        dX *= (time-self.last_time)
+        self.last_time = time
 
         # Update Motion Model
         self.lock.acquire()
@@ -88,7 +96,7 @@ class ParticleFilter:
         particle_weights = self.sensor_model.evaluate(self.particles, lidar_data)
 
         # Resample Particles
-        selection = np.random.choice(self.particle_indices, self.num_particles, p=particle_weights)
+        selection = np.random.choice(self.particle_indices, self.num_particles, p=particle_weights/np.sum(particle_weights))
         self.particles = self.particles[selection]
 
         # Update Pose Estimate
