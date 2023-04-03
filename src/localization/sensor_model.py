@@ -135,7 +135,7 @@ class SensorModel:
                given the observation and the map.
         """
         if not self.map_set:
-            return
+            return None
 
         # Get ray tracing
         #rospy.loginfo(particles)

@@ -105,6 +105,8 @@ class ParticleFilter:
         # Update Sensor Model
         self.lock.acquire()
         particle_weights = self.sensor_model.evaluate(self.particles, lidar_data)
+        if particle_weights is None:
+            return
 
         # Resample Particles
         selection = np.random.choice(self.particle_indices, self.num_particles, p=particle_weights/np.sum(particle_weights))
