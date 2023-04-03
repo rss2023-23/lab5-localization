@@ -152,25 +152,11 @@ class SensorModel:
         scans = np.round(scans).astype("int")
        
         # Gather particle beam probabilities
-        #rospy.loginfo(observation)
-        #rospy.loginfo(scans)    
         beam_data = self.sensor_model_table[observation, scans]
-        # rospy.loginfo(beam_data)
-        # rospy.loginfo(beam_data.sum(axis=0))
-        # rospy.loginfo(beam_data.sum(axis=1))
-        # rospy.loginfo(beam_data.sum())
-
-        # x = np.prod(beam_data, axis=1)
-        #rospy.loginfo(x)
-        #rospy.loginfo(x.sum())
 
         # Compute particle probabilities
         prob_particles = np.power(np.prod(beam_data, axis=1), self.squashing_parameter)
-        prob_particles /= prob_particles.sum() # normalized to sum to 1
         return prob_particles
-
-
-        
 
     def map_callback(self, map_msg):
         # Convert the map to a numpy array

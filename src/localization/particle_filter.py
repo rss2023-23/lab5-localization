@@ -27,12 +27,14 @@ class ParticleFilter:
         self.particle_indices = np.arange(0, self.num_particles)
         self.lock = threading.Lock()
         self.estimated_pose = [0,0,0]
+        self.last_time = rospy.get_time()
 
         # Initialize publishers
         self.odom_pub  = rospy.Publisher("/pf/pose/odom", Odometry, queue_size = 1)
         self.particle_visualizer = rospy.Publisher("/particles", PoseArray, queue_size = 10)
         self.tf_buffer = tf2_ros.Buffer()
         self.tf_broadcaster = tf2_ros.TransformBroadcaster()
+
 
 
         # Initialize subscribers
@@ -48,17 +50,18 @@ class ParticleFilter:
                 self.initialize_particles,                        
                 queue_size=1)
 
+        # Tunable Parameters
+        self.noise_scale = 0.5 # Used for particle initialization random distribution
+ 
     def initialize_particles(self, data):
+        # Get click pose
         pose = data.pose.pose
-        covariance = np.array(data.pose.covariance).reshape((6,6))
-
         orient = pose.orientation
         quat_tuple = (orient.x, orient.y, orient.z, orient.w)
         roll, pitch, yaw = euler_from_quaternion(quat_tuple)
-        mean = [pose.position.x, pose.position.y, yaw]
-        relevant_covariance_idx = [0, 1, 5] #[x], [y], z, roll, pitch, [yaw=theta]
-        relevant_covariance = covariance[np.ix_(relevant_covariance_idx, relevant_covariance_idx)] #sub covariance matrix with only x, y, theta
-        init_particles = np.random.multivariate_normal(mean, relevant_covariance, self.num_particles)
+        click_pose = [pose.position.x, pose.position.y, yaw]
+
+        init_particles = np.random.normal(click_pose, scale=self.noise_scale, size=(self.num_particles,3))
         self.particles = init_particles
 
     def on_get_odometry(self, odometry_data):
@@ -68,6 +71,11 @@ class ParticleFilter:
         twist_dy = twist.linear.y
         twist_dtheta = twist.angular.z
         dX = np.array([twist_dx, twist_dy, twist_dtheta])
+
+        # Scale by dT
+        time = rospy.get_time()
+        dX *= (time-self.last_time)
+        self.last_time = time
 
         # Update Motion Model
         self.lock.acquire()
@@ -88,7 +96,7 @@ class ParticleFilter:
         particle_weights = self.sensor_model.evaluate(self.particles, lidar_data)
 
         # Resample Particles
-        selection = np.random.choice(self.particle_indices, self.num_particles, p=particle_weights)
+        selection = np.random.choice(self.particle_indices, self.num_particles, p=particle_weights/np.sum(particle_weights))
         self.particles = self.particles[selection]
 
         # Update Pose Estimate
@@ -102,6 +110,7 @@ class ParticleFilter:
         particle_theta = self.particles[:, 2]  # angle values
 
         # Estimate Robot Position through Averaging
+        # TODO: Consider other forms of estimating position
         average_x = np.average(particle_x)
         average_y = np.average(particle_y)
         average_theta = np.arctan2(np.sum(np.sin(particle_theta)), np.sum(np.cos(particle_theta)))
