@@ -134,8 +134,8 @@ class SensorModel:
                the probability of each particle existing
                given the observation and the map.
         """
-        if not self.map_set:
-            return
+        # if not self.map_set:
+        #     return
 
         # Get ray tracing
         #rospy.loginfo(particles)
