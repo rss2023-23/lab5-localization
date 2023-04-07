@@ -12,8 +12,13 @@ from geometry_msgs.msg import PoseWithCovarianceStamped, PoseArray, Pose, Point,
 from tf.transformations import euler_from_quaternion, quaternion_from_euler
 import threading
 
+
 class ParticleFilter:   
     def __init__(self):
+
+        # begin searching for map
+        self.map_loaded = False
+
         # Get parameters
         self.particle_filter_frame = \
                 rospy.get_param("~particle_filter_frame")
@@ -52,6 +57,9 @@ class ParticleFilter:
 
         # Tunable Parameters
         self.noise_scale = 0.5 # Used for particle initialization random distribution
+
+        # make sure map is initialized
+        self.map_loaded = True
  
     def initialize_particles(self, data):
         # Get click pose
@@ -91,9 +99,14 @@ class ParticleFilter:
         if len(lidar_data) > self.num_beams_per_particle:
             lidar_data = lidar_data[np.linspace(0, len(lidar_data) - 1, self.num_beams_per_particle, endpoint=True, dtype="int")]
 
+        if self.map_loaded == False:
+            return
+
         # Update Sensor Model
         self.lock.acquire()
         particle_weights = self.sensor_model.evaluate(self.particles, lidar_data)
+        if particle_weights is None:
+            return
 
         # Resample Particles
         selection = np.random.choice(self.particle_indices, self.num_particles, p=particle_weights/np.sum(particle_weights))
