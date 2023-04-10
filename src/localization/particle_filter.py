@@ -132,7 +132,7 @@ class ParticleFilter:
         average_theta = np.arctan2(np.sum(np.sin(particle_theta)), np.sum(np.cos(particle_theta)))
         self.estimated_pose = (average_x, average_y, average_theta)
 
-        self.avg_particle.publish(self.estimated_pose)
+        self.avg_particle.publish(str(average_x) + ', ' +  str(average_y)  + ', ' + str(average_theta))
 
         # Broadcast Estimated Robot Transform
         transform_msg = TransformStamped()
