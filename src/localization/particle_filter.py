@@ -40,6 +40,9 @@ class ParticleFilter:
         self.tf_buffer = tf2_ros.Buffer()
         self.tf_broadcaster = tf2_ros.TransformBroadcaster()
 
+        # metrics publishers
+        avg_particle = rospy.Publisher('/average_particles', String, queue_size=10)
+
 
 
         # Initialize subscribers
@@ -128,6 +131,8 @@ class ParticleFilter:
         average_y = np.average(particle_y)
         average_theta = np.arctan2(np.sum(np.sin(particle_theta)), np.sum(np.cos(particle_theta)))
         self.estimated_pose = (average_x, average_y, average_theta)
+
+        self.avg_particle.publish(self.estimated_pose)
 
         # Broadcast Estimated Robot Transform
         transform_msg = TransformStamped()
